@@ -1,0 +1,1378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bluetooth LED Controller</title>
+    <!-- Import Three.js for 3D elements -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- Import GSAP for smooth animations -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.9.1/gsap.min.js"></script>
+    <style>
+        /* Reset and base styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #00f7ff;
+            --primary-dark: #0099ff;
+            --secondary: #ff00e5;
+            --dark: #0a0a1a;
+            --darker: #050510;
+            --light: #ffffff;
+            --gray: #8a8aa0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: var(--light);
+            background-color: var(--dark);
+            overflow-x: hidden;
+            perspective: 1000px;
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--darker);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--primary-dark);
+            border-radius: 10px;
+        }
+
+        /* Container */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 20px;
+            position: relative;
+            z-index: 2;
+        }
+
+        /* Neon text effect */
+        .neon-text {
+            text-shadow: 0 0 5px var(--primary),
+                         0 0 10px var(--primary),
+                         0 0 20px var(--primary);
+            color: var(--light);
+        }
+
+        /* Glowing elements */
+        .glow {
+            position: relative;
+        }
+
+        .glow::after {
+            content: '';
+            position: absolute;
+            top: -5px;
+            left: -5px;
+            right: -5px;
+            bottom: -5px;
+            background: linear-gradient(45deg, var(--primary), var(--secondary));
+            filter: blur(20px);
+            opacity: 0.5;
+            z-index: -1;
+            border-radius: inherit;
+        }
+
+        /* 3D card effect */
+        .card-3d {
+            transform-style: preserve-3d;
+            transition: transform 0.5s ease;
+            background: rgba(10, 10, 26, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            overflow: hidden;
+        }
+
+        .card-3d:hover {
+            transform: translateY(-10px) rotateX(5deg) rotateY(5deg);
+            box-shadow: 0 15px 30px rgba(0, 247, 255, 0.2);
+        }
+
+        /* Header */
+        header {
+            background: linear-gradient(135deg, rgba(0, 247, 255, 0.1), rgba(255, 0, 229, 0.1));
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 2rem 0;
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 100;
+            transition: all 0.3s ease;
+        }
+
+        header.scrolled {
+            padding: 1rem 0;
+            background: rgba(5, 5, 16, 0.95);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1rem;
+        }
+
+        .logo-icon {
+            font-size: 2.5rem;
+            margin-right: 0.5rem;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.7; }
+            50% { opacity: 1; }
+            100% { opacity: 0.7; }
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            font-weight: 800;
+        }
+
+        .tagline {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            color: var(--gray);
+        }
+
+        /* Hero section */
+        .hero {
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+            padding-top: 80px;
+        }
+
+        .hero-content {
+            width: 50%;
+            padding-right: 2rem;
+            animation: fadeInLeft 1s ease-out;
+        }
+
+        .hero-3d {
+            width: 50%;
+            height: 500px;
+            position: relative;
+        }
+
+        #hero-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        @keyframes fadeInLeft {
+            from {
+                opacity: 0;
+                transform: translateX(-50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        /* Main content */
+        main {
+            padding: 3rem 0;
+            margin-top: 100vh;
+            position: relative;
+            z-index: 2;
+            background: linear-gradient(to bottom, var(--dark), var(--darker));
+        }
+
+        /* Floating particles background */
+        .particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        .particle {
+            position: absolute;
+            width: 5px;
+            height: 5px;
+            background: var(--primary);
+            border-radius: 50%;
+            opacity: 0.3;
+            animation: float 20s linear infinite;
+        }
+
+        @keyframes float {
+            0% {
+                transform: translateY(0) translateX(0);
+            }
+            25% {
+                transform: translateY(-100px) translateX(100px);
+            }
+            50% {
+                transform: translateY(-200px) translateX(0);
+            }
+            75% {
+                transform: translateY(-100px) translateX(-100px);
+            }
+            100% {
+                transform: translateY(0) translateX(0);
+            }
+        }
+
+        .app-info {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 5rem;
+            perspective: 1000px;
+        }
+
+        .app-description {
+            flex: 1;
+            min-width: 300px;
+            padding: 2rem;
+            transform: translateZ(20px);
+            animation: fadeIn 1s ease-out;
+        }
+
+        .app-image {
+            flex: 1;
+            min-width: 300px;
+            text-align: center;
+            padding: 1rem;
+            perspective: 1000px;
+        }
+
+        .app-image img {
+            max-width: 100%;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+            transform-style: preserve-3d;
+            transform: rotateY(-10deg);
+            transition: transform 0.5s ease;
+            border: 2px solid rgba(0, 247, 255, 0.3);
+        }
+
+        .app-image img:hover {
+            transform: rotateY(0deg);
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        h2 {
+            font-size: 2.5rem;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            font-weight: 700;
+        }
+
+        p {
+            margin-bottom: 1.5rem;
+            font-size: 1.1rem;
+            color: var(--gray);
+            line-height: 1.8;
+        }
+
+        /* Features */
+        .features {
+            background: rgba(10, 10, 26, 0.5);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 3rem;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+            margin-bottom: 5rem;
+            transform-style: preserve-3d;
+            perspective: 1000px;
+        }
+
+        .features-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2.5rem;
+            margin-top: 2.5rem;
+        }
+
+        .feature-item {
+            display: flex;
+            align-items: flex-start;
+            padding: 1.5rem;
+            border-radius: 15px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.3s ease;
+            transform: translateZ(0);
+        }
+
+        .feature-item:hover {
+            transform: translateZ(20px) scale(1.03);
+            box-shadow: 0 10px 20px rgba(0, 247, 255, 0.1);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .feature-icon {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: var(--dark);
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 1.5rem;
+            flex-shrink: 0;
+            font-size: 1.5rem;
+            box-shadow: 0 5px 15px rgba(0, 247, 255, 0.3);
+        }
+
+        .feature-text h3 {
+            margin-bottom: 0.8rem;
+            color: var(--light);
+            font-size: 1.3rem;
+        }
+
+        .feature-text p {
+            color: var(--gray);
+            font-size: 1rem;
+            margin-bottom: 0;
+        }
+
+        /* Demo section */
+        .demo-section {
+            margin-bottom: 5rem;
+            perspective: 1000px;
+        }
+
+        .demo-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        .demo-video {
+            flex: 1;
+            min-width: 300px;
+            border-radius: 20px;
+            overflow: hidden;
+            border: 2px solid rgba(0, 247, 255, 0.3);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+            transform: rotateY(5deg);
+            transition: transform 0.5s ease;
+        }
+
+        .demo-video:hover {
+            transform: rotateY(0deg);
+        }
+
+        .demo-video video {
+            width: 100%;
+            display: block;
+        }
+
+        .demo-text {
+            flex: 1;
+            min-width: 300px;
+            padding: 2rem;
+        }
+
+        /* Testimonials */
+        .testimonials {
+            margin-bottom: 5rem;
+        }
+
+        .testimonial-slider {
+            display: flex;
+            overflow-x: auto;
+            scroll-snap-type: x mandatory;
+            gap: 2rem;
+            padding: 1rem 0;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+
+        .testimonial-slider::-webkit-scrollbar {
+            display: none;
+        }
+
+        .testimonial-card {
+            scroll-snap-align: start;
+            min-width: 300px;
+            flex: 0 0 calc(33.333% - 2rem);
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 2rem;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .testimonial-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 10px 20px rgba(0, 247, 255, 0.1);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .testimonial-quote {
+            font-size: 1.1rem;
+            font-style: italic;
+            margin-bottom: 1.5rem;
+            color: var(--gray);
+        }
+
+        .testimonial-author {
+            display: flex;
+            align-items: center;
+        }
+
+        .author-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            margin-right: 1rem;
+            border: 2px solid var(--primary);
+        }
+
+        .author-info h4 {
+            color: var(--light);
+            margin-bottom: 0.2rem;
+        }
+
+        .author-info p {
+            color: var(--gray);
+            font-size: 0.9rem;
+            margin-bottom: 0;
+        }
+
+        /* FAQ Section */
+        .faq-section {
+            margin-bottom: 5rem;
+        }
+
+        .faq-item {
+            margin-bottom: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .faq-question {
+            padding: 1.5rem;
+            background: rgba(255, 255, 255, 0.03);
+            color: var(--light);
+            font-size: 1.2rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .faq-question:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .faq-answer {
+            padding: 0 1.5rem;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease, padding 0.3s ease;
+        }
+
+        .faq-item.active .faq-answer {
+            padding: 1.5rem;
+            max-height: 500px;
+        }
+
+        .faq-toggle {
+            font-size: 1.5rem;
+            transition: transform 0.3s ease;
+        }
+
+        .faq-item.active .faq-toggle {
+            transform: rotate(45deg);
+        }
+
+        /* Download section */
+        .download-section {
+            text-align: center;
+            padding: 4rem 2rem;
+            background: linear-gradient(135deg, rgba(0, 247, 255, 0.1), rgba(255, 0, 229, 0.1));
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .download-section::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(0, 247, 255, 0.1) 0%, transparent 70%);
+            animation: rotate 20s linear infinite;
+            z-index: -1;
+        }
+
+        @keyframes rotate {
+            from {
+                transform: rotate(0deg);
+            }
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .download-btn {
+            display: inline-block;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: var(--dark);
+            padding: 1.2rem 3rem;
+            border-radius: 50px;
+            font-size: 1.3rem;
+            font-weight: bold;
+            text-decoration: none;
+            margin-top: 2rem;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            border: none;
+            cursor: pointer;
+            z-index: 1;
+        }
+
+        .download-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, var(--secondary), var(--primary));
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            z-index: -1;
+        }
+
+        .download-btn:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 247, 255, 0.4);
+        }
+
+        .download-btn:hover::before {
+            opacity: 1;
+        }
+
+        .download-info {
+            margin-top: 1.5rem;
+            font-size: 1rem;
+            color: var(--gray);
+        }
+
+        /* Footer */
+        footer {
+            background: linear-gradient(to top, var(--darker), transparent);
+            color: var(--gray);
+            padding: 4rem 0 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .footer-content {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .footer-column {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .footer-column h3 {
+            color: var(--light);
+            margin-bottom: 1.5rem;
+            font-size: 1.3rem;
+        }
+
+        .footer-column ul {
+            list-style: none;
+        }
+
+        .footer-column ul li {
+            margin-bottom: 0.8rem;
+        }
+
+        .footer-column a {
+            color: var(--gray);
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .footer-column a:hover {
+            color: var(--primary);
+        }
+
+        .footer-bottom {
+            text-align: center;
+            padding-top: 2rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .social-links {
+            display: flex;
+            justify-content: center;
+            gap: 1.5rem;
+            margin: 1.5rem 0;
+        }
+
+        .social-link {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.05);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--light);
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .social-link:hover {
+            background: var(--primary);
+            color: var(--dark);
+            transform: translateY(-5px);
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(5, 5, 16, 0.8);
+            backdrop-filter: blur(10px);
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            perspective: 1000px;
+        }
+
+        .modal-content {
+            background: linear-gradient(135deg, rgba(10, 10, 26, 0.9), rgba(5, 5, 16, 0.95));
+            padding: 3rem;
+            border-radius: 20px;
+            max-width: 600px;
+            width: 90%;
+            text-align: center;
+            position: relative;
+            border: 1px solid rgba(0, 247, 255, 0.2);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4),
+                        0 0 30px rgba(0, 247, 255, 0.2);
+            transform: rotateX(-10deg);
+            animation: modalOpen 0.5s forwards;
+        }
+
+        @keyframes modalOpen {
+            to {
+                transform: rotateX(0);
+            }
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            font-size: 1.8rem;
+            cursor: pointer;
+            color: var(--gray);
+            transition: color 0.3s ease;
+        }
+
+        .close-modal:hover {
+            color: var(--primary);
+        }
+
+        .modal-content h2 {
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-content p {
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-content a {
+            color: var(--primary);
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .modal-content a:hover {
+            color: var(--secondary);
+            text-decoration: underline;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 1200px) {
+            .hero-content {
+                width: 60%;
+            }
+            
+            .hero-3d {
+                width: 40%;
+            }
+        }
+
+        @media (max-width: 992px) {
+            h1 {
+                font-size: 2.2rem;
+            }
+            
+            h2 {
+                font-size: 2rem;
+            }
+            
+            .hero {
+                flex-direction: column;
+                justify-content: center;
+                height: auto;
+                min-height: 100vh;
+                padding-top: 120px;
+                padding-bottom: 50px;
+            }
+            
+            .hero-content, .hero-3d {
+                width: 100%;
+                text-align: center;
+            }
+            
+            .hero-content {
+                margin-bottom: 3rem;
+            }
+            
+            .hero-3d {
+                height: 400px;
+            }
+            
+            main {
+                margin-top: 0;
+            }
+            
+            .app-info {
+                flex-direction: column-reverse;
+            }
+            
+            .app-image {
+                margin-bottom: 2rem;
+            }
+            
+            .testimonial-card {
+                flex: 0 0 calc(50% - 2rem);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .features-list {
+                grid-template-columns: 1fr;
+            }
+            
+            .testimonial-card {
+                flex: 0 0 calc(100% - 2rem);
+            }
+            
+            .demo-container {
+                flex-direction: column;
+            }
+            
+            .footer-content {
+                flex-direction: column;
+            }
+        }
+
+        @media (max-width: 480px) {
+            h1 {
+                font-size: 1.8rem;
+            }
+            
+            h2 {
+                font-size: 1.6rem;
+            }
+            
+            .hero-3d {
+                height: 300px;
+            }
+            
+            .download-btn {
+                padding: 1rem 2rem;
+                font-size: 1.1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Floating particles background -->
+    <div class="particles" id="particles"></div>
+
+    <!-- Header section -->
+    <header id="header">
+        <div class="container">
+            <div class="logo">
+                <div class="logo-icon">📱</div>
+                <h1>Bluetooth LED Controller</h1>
+            </div>
+            <p class="tagline">Control your LED lights wirelessly from your Android device</p>
+        </div>
+    </header>
+
+    <!-- Hero section with 3D model -->
+    <section class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <h2 class="neon-text">The Future of LED Control</h2>
+                <p>Experience the next generation of wireless LED control with our cutting-edge Bluetooth LED Controller app. Seamlessly connect to your hardware and control your lighting with precision and ease.</p>
+                <button id="heroDownloadBtn" class="download-btn glow" onclick="downloadFile()">Download Now</button>
+
+<script>
+  function downloadFile() {
+
+    let dwn = document.createElement('a');
+    
+    // Set the href attribute to the file you want to download
+    // Here, we assume you want to download a file named "example.txt"
+    dwn.href = 'Led_on_off (2).apk'; // Replace with your actual file path
+    
+    // Set the download attribute to specify the filename
+    dwn.download = 'Led_on_off (2).apk'; // Replace with your desired filename
+    
+    // Simulate a click on the link to start the download
+    dwn.click();
+    
+    // Remove the link element (optional)
+    dwn.remove();
+  }
+</script>
+
+                <script>
+                </script>
+            </div>
+            <div class="hero-3d">
+                <canvas id="hero-canvas"></canvas>
+            </div>
+        </div>
+    </section>
+
+    <!-- Main content -->
+    <main>
+        <div class="container">
+            <!-- App info section -->
+            <section class="app-info">
+                <div class="app-description card-3d">
+                    <h2>Take Control of Your Lights</h2>
+                    <p>The Bluetooth LED Controller app allows you to wirelessly control LED lights connected to a Bluetooth module. With an intuitive interface and reliable connection, you can turn your LEDs on and off with just a tap.</p>
+                    <p>Perfect for DIY projects, home automation, or educational purposes, this app makes working with Bluetooth-enabled hardware simple and fun.</p>
+                </div>
+                <div class="app-image">
+                    <img src="https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&w=800&q=80" alt="Bluetooth LED Controller App Interface" />
+                </div>
+            </section>
+
+            <!-- Features section -->
+            <section class="features">
+                <h2>Key Features</h2>
+                <div class="features-list">
+                    <div class="feature-item">
+                        <div class="feature-icon">🔌</div>
+                        <div class="feature-text">
+                            <h3>Simple On/Off Control</h3>
+                            <p>Toggle your LED with a simple tap on your screen. Intuitive interface makes controlling your lights effortless.</p>
+                        </div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon">🔄</div>
+                        <div class="feature-text">
+                            <h3>Quick Connection</h3>
+                            <p>Fast and reliable Bluetooth pairing with your hardware. Auto-reconnect feature saves time and frustration.</p>
+                        </div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon">📊</div>
+                        <div class="feature-text">
+                            <h3>Status Feedback</h3>
+                            <p>Real-time status updates of your LED connection. Never wonder if your command was received.</p>
+                        </div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon">🔋</div>
+                        <div class="feature-text">
+                            <h3>Energy Efficient</h3>
+                            <p>Optimized for minimal battery consumption. Use the app all day without draining your device.</p>
+                        </div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon">⏱️</div>
+                        <div class="feature-text">
+                            <h3>Scheduling</h3>
+                            <p>Set schedules for your LEDs to turn on or off automatically. Perfect for home automation.</p>
+                        </div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon">🔒</div>
+                        <div class="feature-text">
+                            <h3>Secure Connection</h3>
+                            <p>Encrypted Bluetooth connection ensures your devices remain secure and protected.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Demo section -->
+            <section class="demo-section">
+                <h2>See It In Action</h2>
+                <div class="demo-container">
+                    <div class="demo-video">
+                        <video autoplay loop muted playsinline>
+                            <source src="https://assets.mixkit.co/videos/preview/mixkit-hand-turning-on-and-off-a-lamp-4820-large.mp4" type="video/mp4">  type="video/mp4">
+                            Your browser does not support the video tag.
+                        </video>
+                    </div>
+                    <div class="demo-text">
+                        <h3>Intuitive Control</h3>
+                        <p>Our app provides a seamless experience for controlling your LED lights. Simply connect to your Bluetooth module, and you'll have instant control over your lighting with a clean, responsive interface.</p>
+                        <p>The video demonstrates how quickly you can toggle your lights on and off, with virtually no delay between your tap and the light's response.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Testimonials section -->
+            <section class="testimonials">
+                <h2>What Our Users Say</h2>
+                <div class="testimonial-slider">
+                    <div class="testimonial-card">
+                        <p class="testimonial-quote">"This app has completely transformed my DIY lighting projects. The interface is beautiful and the connection is rock solid. Highly recommended!"</p>
+                        <div class="testimonial-author">
+                            <img src="https://randomuser.me/api/portraits/men/32.jpg" alt="User Avatar" class="author-avatar">
+                            <div class="author-info">
+                                <h4>Michael T.</h4>
+                                <p>Maker & DIY Enthusiast</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="testimonial-card">
+                        <p class="testimonial-quote">"I've tried several Bluetooth controller apps, but this one stands out for its reliability and ease of use. The scheduling feature is a game-changer!"</ one stands out for its reliability and ease of use. The scheduling feature is a game-changer!"
+                        <div class="testimonial-author">
+                            <img src="https://randomuser.me/api/portraits/women/44.jpg" alt="User Avatar" class="author-avatar">
+                            <div class="author-info">
+                                <h4>Sarah L.</h4>
+                                <p>Home Automation Expert</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="testimonial-card">
+                        <p class="testimonial-quote">"Perfect for my Arduino projects! The app connects quickly and the interface is intuitive. I love how it doesn't drain my battery like other apps."</p>
+                        <div class="testimonial-author">
+                            <img src="https://randomuser.me/api/portraits/men/67.jpg" alt="User Avatar" class="author-avatar">
+                            <div class="author-info">
+                                <h4>David R.</h4>
+                                <p>Electronics Engineer</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- FAQ Section -->
+            <section class="faq-section">
+                <h2>Frequently Asked Questions</h2>
+                <div class="faq-container">
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <span>What hardware do I need to use this app?</span>
+                            <span class="faq-toggle">+</span>
+                        </div>
+                        <div class="faq-answer">
+                            <p>You'll need an Android device with Bluetooth capability and a compatible Bluetooth module (like HC-05 or HC-06) connected to your LED circuit. The app works with most Arduino and ESP32/ESP8266 based projects.</p>
+                        </div>
+                    </div>
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <span>Is the app compatible with RGB LED strips?</span>
+                            <span class="faq-toggle">+</span>
+                        </div>
+                        <div class="faq-answer">
+                            <p>Yes! The app supports both single-color LEDs and RGB LED strips. For RGB strips, you'll have access to color selection and various lighting effects.</p>
+                        </div>
+                    </div>
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <span>What's the maximum range for the Bluetooth connection?</span>
+                            <span class="faq-toggle">+</span>
+                        </div>
+                        <div class="faq-answer">
+                            <p>The typical range for Bluetooth connections is about 10 meters (33 feet), but this can vary depending on environmental factors and obstacles between your device and the Bluetooth module.</p>
+                        </div>
+                    </div>
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <span>Does the app require an internet connection?</span>
+                            <span class="faq-toggle">+</span>
+                        </div>
+                        <div class="faq-answer">
+                            <p>No, the app works completely offline. It communicates directly with your Bluetooth module without needing an internet connection.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Download section -->
+            <section class="download-section">
+                <h2 class="neon-text" onclick="dwd()">Download Now</h2>
+                <script>
+                    function dwd() {
+                  
+                      let dwn = document.createElement('a');
+                      
+                      // Set the href attribute to the file you want to download
+                      // Here, we assume you want to download a file named "example.txt"
+                      dwn.href = 'Led_on_off (2).apk'; // Replace with your actual file path
+                      
+                      // Set the download attribute to specify the filename
+                      dwn.download = 'Led_controller.apk'; // Replace with your desired filename
+                      
+                      // Simulate a click on the link to start the download
+                      dwn.click();
+                      
+                      // Remove the link element (optional)
+                      dwn.remove();
+                    }
+                  </script>
+                <p>Get started with your Bluetooth LED projects today!</p>
+                <button id="downloadBtn" class="download-btn">Download for Android</button>
+                <p class="download-info">Compatible with Android 6.0 and above</p>
+            </section>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-column">
+                    <h3>Bluetooth LED Controller</h3>
+                    <p>The future of wireless LED control in your hands. Simple, reliable, and powerful.</p>
+                </div>
+                <div class="footer-column">
+                    <h3>Quick Links</h3>
+                    <ul>
+                        <li><a href="#">Home</a></li>
+                        <li><a href="#">Features</a></li>
+                        <li><a href="#">Download</a></li>
+                        <li><a href="#">Support</a></li>
+                    </ul>
+                </div>
+                <div class="footer-column">
+                    <h3>Resources</h3>
+                    <ul>
+                        <li><a href="#">Documentation</a></li>
+                        <li><a href="#">Tutorials</a></li>
+                        <li><a href="#">FAQs</a></li>
+                        <li><a href="#">Blog</a></li>
+                    </ul>
+                </div>
+                <div class="footer-column">
+                    <h3>Legal</h3>
+                    <ul>
+                        <li><a href="#">Privacy Policy</a></li>
+                        <li><a href="#">Terms of Use</a></li>
+                        <li><a href="#">License</a></li>
+                        <li><a href="#">Contact</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="social-links">
+                <a href="#" class="social-link">f</a>
+                <a href="#" class="social-link">t</a>
+                <a href="#" class="social-link">in</a>
+                <a href="#" class="social-link">ig</a>
+            </div>
+            <div class="footer-bottom">
+                <p>© 2023 Bluetooth LED Controller App. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Download confirmation modal -->
+    <div id="downloadModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" id="closeModal">&times;</span>
+            <h2 class="neon-text">Download Started</h2>
+            <p>Thank you for downloading the Bluetooth LED Controller app!</p>
+            <p>If your download doesn't start automatically, <a href="#" id="directDownloadLink">click here</a>.</p>
+            <p>After installation, follow the in-app instructions to connect to your Bluetooth module.</p>
+        </div>
+    </div>
+
+    <!-- JavaScript -->
+    <script>
+        // Wait for the DOM to be fully loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            // Get DOM elements
+            const downloadBtn = document.getElementById('downloadBtn');
+            const heroDownloadBtn = document.getElementById('heroDownloadBtn');
+            const downloadModal = document.getElementById('downloadModal');
+            const closeModal = document.getElementById('closeModal');
+            const directDownloadLink = document.getElementById('directDownloadLink');
+            const header = document.getElementById('header');
+            const faqItems = document.querySelectorAll('.faq-item');
+            
+            // Create particles
+            const particlesContainer = document.getElementById('particles');
+            for (let i = 0; i < 50; i++) {
+                const particle = document.createElement('div');
+                particle.classList.add('particle');
+                particle.style.left = `${Math.random() * 100}%`;
+                particle.style.top = `${Math.random() * 100}%`;
+                particle.style.width = `${Math.random() * 5 + 2}px`;
+                particle.style.height = particle.style.width;
+                particle.style.opacity = `${Math.random() * 0.5 + 0.1}`;
+                particle.style.animationDuration = `${Math.random() * 20 + 10}s`;
+                particle.style.animationDelay = `${Math.random() * 5}s`;
+                particlesContainer.appendChild(particle);
+            }
+            
+            // Header scroll effect
+            window.addEventListener('scroll', function() {
+                if (window.scrollY > 50) {
+                    header.classList.add('scrolled');
+                } else {
+                    header.classList.remove('scrolled');
+                }
+            });
+            
+            // Show download modal when download button is clicked
+            downloadBtn.addEventListener('click', function() {
+                // In a real implementation, you would initiate the actual download here
+                // For example: window.location.href = 'https://example.com/app-download.apk';
+                
+                // Show the confirmation modal
+                downloadModal.style.display = 'flex';
+                
+                // Log download attempt
+                console.log('Download button clicked at:', new Date().toLocaleString());
+            });
+            
+            // Hero download button
+            heroDownloadBtn.addEventListener('click', function() {
+                downloadModal.style.display = 'flex';
+            });
+            
+            // Close modal when the X is clicked
+            closeModal.addEventListener('click', function() {
+                downloadModal.style.display = 'none';
+            });
+            
+            // Close modal when clicking outside of it
+            window.addEventListener('click', function(event) {
+                if (event.target === downloadModal) {
+                    downloadModal.style.display = 'none';
+                }
+            });
+            
+            // Direct download link functionality
+            directDownloadLink.addEventListener('click', function(e) {
+                e.preventDefault();
+                // In a real implementation, you would set the actual download link here
+                alert('This would trigger the direct download in a real implementation.');
+                
+                // Log direct download attempt
+                console.log('Direct download link clicked at:', new Date().toLocaleString());
+            });
+            
+            // FAQ accordion functionality
+            faqItems.forEach(item => {
+                const question = item.querySelector('.faq-question');
+                question.addEventListener('click', () => {
+                    // Close all other items
+                    faqItems.forEach(otherItem => {
+                        if (otherItem !== item) {
+                            otherItem.classList.remove('active');
+                        }
+                    });
+                    
+                    // Toggle current item
+                    item.classList.toggle('active');
+                });
+            });
+            
+            // 3D Model with Three.js
+            const setupThreeJS = () => {
+                // Create scene
+                const scene = new THREE.Scene();
+                
+                // Create camera
+                const camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
+                camera.position.z = 5;
+                
+                // Create renderer
+                const canvas = document.getElementById('hero-canvas');
+                const renderer = new THREE.WebGLRenderer({
+                    canvas,
+                    alpha: true,
+                    antialias: true
+                });
+                renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+                
+                // Create smartphone model
+                const phoneGeometry = new THREE.BoxGeometry(2, 4, 0.2);
+                const phoneMaterial = new THREE.MeshPhongMaterial({
+                    color: 0x333333,
+                    specular: 0x111111,
+                    shininess: 100
+                });
+                const phone = new THREE.Mesh(phoneGeometry, phoneMaterial);
+                scene.add(phone);
+                
+                // Create screen
+                const screenGeometry = new THREE.PlaneGeometry(1.8, 3.2);
+                const screenMaterial = new THREE.MeshBasicMaterial({
+                    color: 0x00f7ff,
+                    opacity: 0.8,
+                    transparent: true
+                });
+                const screen = new THREE.Mesh(screenGeometry, screenMaterial);
+                screen.position.z = 0.11;
+                phone.add(screen);
+                
+                // Create LED
+                const ledGeometry = new THREE.SphereGeometry(0.5, 32, 32);
+                const ledMaterial = new THREE.MeshPhongMaterial({
+                    color: 0xff0000,
+                    emissive: 0xff0000,
+                    emissiveIntensity: 0.5
+                });
+                const led = new THREE.Mesh(ledGeometry, ledMaterial);
+                led.position.set(3, 0, 0);
+                scene.add(led);
+                
+                // Create connection line
+                const lineMaterial = new THREE.LineBasicMaterial({
+                    color: 0x00f7ff,
+                    transparent: true,
+                    opacity: 0.6
+                });
+                const lineGeometry = new THREE.BufferGeometry().setFromPoints([
+                    new THREE.Vector3(1, 0, 0),
+                    new THREE.Vector3(2.5, 0, 0)
+                ]);
+                const line = new THREE.Line(lineGeometry, lineMaterial);
+                scene.add(line);
+                
+                // Add lights
+                const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+                scene.add(ambientLight);
+                
+                const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+                directionalLight.position.set(5, 5, 5);
+                scene.add(directionalLight);
+                
+                // Animation variables
+                let ledOn = false;
+                let ledTimer = 0;
+                
+                // Animation loop
+                const animate = () => {
+                    requestAnimationFrame(animate);
+                    
+                    // Rotate phone slightly
+                    phone.rotation.y = Math.sin(Date.now() * 0.001) * 0.2;
+                    phone.rotation.x = Math.sin(Date.now() * 0.0005) * 0.1;
+                    
+                    // LED blinking effect
+                    ledTimer += 0.02;
+                    if (ledTimer > 2) {
+                        ledOn = !ledOn;
+                        ledTimer = 0;
+                        
+                        if (ledOn) {
+                            ledMaterial.emissive.setHex(0xff0000);
+                            ledMaterial.color.setHex(0xff0000);
+                            screenMaterial.color.setHex(0x00f7ff);
+                        } else {
+                            ledMaterial.emissive.setHex(0x330000);
+                            ledMaterial.color.setHex(0x330000);
+                            screenMaterial.color.setHex(0x005055);
+                        }
+                    }
+                    
+                    // Render scene
+                    renderer.render(scene, camera);
+                };
+                
+                // Handle window resize
+                const handleResize = () => {
+                    const container = canvas.parentElement;
+                    const width = container.clientWidth;
+                    const height = container.clientHeight;
+                    
+                    camera.aspect = width / height;
+                    camera.updateProjectionMatrix();
+                    
+                    renderer.setSize(width, height);
+                };
+                
+                window.addEventListener('resize', handleResize);
+                handleResize();
+                
+                // Start animation
+                animate();
+            };
+            
+            // Initialize 3D scene
+            setupThreeJS();
+        });
+    </script>
+</body>
+</html>
